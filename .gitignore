@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Local account state and generated Wiki metadata
+data/
+
+# Exported pages, resources, and failure logs
+output/
