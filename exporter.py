@@ -6,6 +6,7 @@ import argparse
 import json
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
@@ -284,22 +285,20 @@ def export_all_browser(state_path: Path, output_root: Path) -> None:
         ).rstrip(".")
         return safe_title or fallback
 
-    leaf_items: list[tuple[dict[str, object], list[str]]] = []
+    export_items: list[tuple[dict[str, object], list[str]]] = []
 
-    def collect_leaves(node: dict[str, object], ancestors: list[str]) -> None:
+    def collect_export_nodes(node: dict[str, object], ancestors: list[str]) -> None:
         current_title = safe_path_part(
             node.get("title"), str(node.get("wiki_token", "untitled"))
         )
+        export_items.append((node, ancestors))
         children = node.get("children", [])
-        if not children:
-            leaf_items.append((node, ancestors))
-            return
         if isinstance(children, list):
             for child in children:
                 if isinstance(child, dict):
-                    collect_leaves(child, ancestors + [current_title])
+                    collect_export_nodes(child, ancestors + [current_title])
 
-    collect_leaves(root_node, [])
+    collect_export_nodes(root_node, [])
 
     output_root.mkdir(parents=True, exist_ok=True)
     failure_log_path = output_root / "export_failures_browser.jsonl"
@@ -307,11 +306,16 @@ def export_all_browser(state_path: Path, output_root: Path) -> None:
     used_paths: set[Path] = set()
     exported_count = 0
     failure_count = 0
+    export_started = time.perf_counter()
+    total_items = len(export_items)
+    print(f"发现节点数量：{total_items}", flush=True)
 
-    for leaf_node, ancestors in leaf_items:
-        title = str(leaf_node.get("title", ""))
-        url = str(leaf_node.get("url", ""))
-        wiki_token = str(leaf_node.get("wiki_token", ""))
+    for index, (export_node, ancestors) in enumerate(export_items, start=1):
+        title = str(export_node.get("title", ""))
+        url = str(export_node.get("url", ""))
+        wiki_token = str(export_node.get("wiki_token", ""))
+        page_started = time.perf_counter()
+        print(f"[{index}/{total_items}] 正在导出：\n{title}", flush=True)
         try:
             if not url:
                 raise ValueError("叶子节点缺少 URL")
@@ -343,10 +347,22 @@ def export_all_browser(state_path: Path, output_root: Path) -> None:
                 check=False,
             )
             if result.returncode != 0:
+                print("第一次失败，等待重试...", flush=True)
+                time.sleep(3)
+                result = subprocess.run(
+                    command,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=False,
+                )
+            if result.returncode != 0:
                 raise RuntimeError(
                     f"feishu-docx 退出码 {result.returncode}: {result.stderr[-1_000:].strip()}"
                 )
             exported_count += 1
+            print("✓ 成功", flush=True)
+            print(f"耗时：{time.perf_counter() - page_started:.2f}秒", flush=True)
         except Exception as error:
             failure_count += 1
             with failure_log_path.open("a", encoding="utf-8") as failure_log:
@@ -364,9 +380,11 @@ def export_all_browser(state_path: Path, output_root: Path) -> None:
                     + "\n"
                 )
 
-    print(f"叶子节点总数：{len(leaf_items)}")
-    print(f"成功导出：{exported_count}")
-    print(f"失败数量：{failure_count}")
+    print("导出完成", flush=True)
+    print(f"节点总数：{total_items}", flush=True)
+    print(f"成功：{exported_count}", flush=True)
+    print(f"失败：{failure_count}", flush=True)
+    print(f"总耗时：{time.perf_counter() - export_started:.2f}秒", flush=True)
     print(f"导出目录：{output_root}")
     print(f"失败日志：{failure_log_path}")
 

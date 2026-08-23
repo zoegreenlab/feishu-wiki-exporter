@@ -11,3 +11,5 @@ output/
 
 # Acceptance test artifacts
 output-image-test/
+output-full-test/
+output-final-test/

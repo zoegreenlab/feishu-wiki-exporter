@@ -1,1 +1,2 @@
 playwright
+./vendor/feishu_docx-0.2.7-1patched-py3-none-any.whl
