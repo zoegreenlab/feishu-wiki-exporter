@@ -8,3 +8,6 @@ data/
 
 # Exported pages, resources, and failure logs
 output/
+
+# Acceptance test artifacts
+output-image-test/
