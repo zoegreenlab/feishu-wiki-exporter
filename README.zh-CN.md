@@ -1,10 +1,17 @@
-# Feishu Wiki Course Exporter
+# Feishu Wiki Exporter
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
 一个面向个人使用的命令行工具，用于导出当前已登录账号有权限访问的飞书 Wiki 内容。工具会重建完整的 Wiki 节点树，并将每个发现到的节点导出为 Markdown 与本地图片资源。
 
 本项目与飞书或字节跳动不存在隶属或官方合作关系。
+
+## 项目状态
+
+稳定维护
+
+核心导出流程已经完成。
+后续更新主要关注 Bug 修复、安全问题、依赖兼容以及飞书结构变化适配。
 
 ## 项目概述
 

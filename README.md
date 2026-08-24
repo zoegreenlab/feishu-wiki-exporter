@@ -1,4 +1,4 @@
-# Feishu Wiki Course Exporter
+# Feishu Wiki Exporter
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
@@ -8,6 +8,14 @@ Wiki node tree and exports every discovered node as Markdown with local image
 resources.
 
 This project is not affiliated with Feishu or ByteDance.
+
+## Project Status
+
+Stable / Maintenance
+
+The core export workflow is complete.
+Future updates will focus on bug fixes, security improvements, dependency
+compatibility, and adapting to Feishu changes.
 
 ## Overview
 
