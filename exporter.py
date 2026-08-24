@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
+import re
 import subprocess
 import time
 from pathlib import Path
-from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
+from urllib.parse import parse_qs, parse_qsl, unquote, urlencode, urlparse, urlunparse
 
 from playwright.sync_api import (
     Browser,
@@ -20,6 +20,9 @@ from playwright.sync_api import (
 
 DEFAULT_STATE_PATH = Path("data/storage_state.json")
 DEFAULT_OUTPUT_DIR = Path("output")
+PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_FEISHU_DOCX = PROJECT_ROOT / ".venv" / "bin" / "feishu-docx"
+MARKDOWN_IMAGE_REFERENCE_PATTERN = re.compile(r"!\[[^\]]*\]\(([^)\n]+)\)")
 NETWORK_PRIORITY_KEYWORDS = (
     "wiki",
     "space",
@@ -71,7 +74,7 @@ def parse_args() -> argparse.Namespace:
     )
 
     export_all_browser_parser = subparsers.add_parser(
-        "export-all-browser", help="Export all leaf pages through feishu-docx"
+        "export-all-browser", help="Export all Wiki nodes through feishu-docx"
     )
     export_all_browser_parser.add_argument(
         "--state-path",
@@ -264,15 +267,20 @@ def _max_tree_level(node: dict[str, object]) -> int:
 
 
 def export_all_browser(state_path: Path, output_root: Path) -> None:
-    """Delegate every leaf page export to the installed feishu-docx CLI."""
+    """Delegate every Wiki node export to the project feishu-docx CLI."""
     require_state_file(state_path)
     tree_path = Path("data/full_wiki_tree.json")
     if not tree_path.exists():
         raise FileNotFoundError(f"未找到完整目录树：{tree_path}")
 
-    cli_path = shutil.which("feishu-docx")
-    if cli_path is None:
-        raise FileNotFoundError("未找到 feishu-docx CLI")
+    if not PROJECT_FEISHU_DOCX.is_file() or not (
+        PROJECT_FEISHU_DOCX.stat().st_mode & 0o111
+    ):
+        raise FileNotFoundError(
+            "未找到可执行的项目 feishu-docx CLI："
+            f"{PROJECT_FEISHU_DOCX}。请在项目根目录执行 requirements.txt 安装步骤。"
+        )
+    cli_path = str(PROJECT_FEISHU_DOCX)
 
     root_node = json.loads(tree_path.read_text(encoding="utf-8"))
     if not isinstance(root_node, dict):
@@ -360,6 +368,7 @@ def export_all_browser(state_path: Path, output_root: Path) -> None:
                 raise RuntimeError(
                     f"feishu-docx 退出码 {result.returncode}: {result.stderr[-1_000:].strip()}"
                 )
+            validate_export_output(output_path)
             exported_count += 1
             print("✓ 成功", flush=True)
             print(f"耗时：{time.perf_counter() - page_started:.2f}秒", flush=True)
@@ -387,6 +396,33 @@ def export_all_browser(state_path: Path, output_root: Path) -> None:
     print(f"总耗时：{time.perf_counter() - export_started:.2f}秒", flush=True)
     print(f"导出目录：{output_root}")
     print(f"失败日志：{failure_log_path}")
+    if failure_count:
+        raise SystemExit(f"导出失败：{failure_count} 个节点未通过导出或完整性校验。")
+
+
+def validate_export_output(markdown_path: Path) -> None:
+    """Verify the output conditions required before a node counts as exported."""
+    if not markdown_path.is_file():
+        raise FileNotFoundError(f"未生成 Markdown 文件：{markdown_path}")
+    if markdown_path.stat().st_size == 0:
+        raise ValueError(f"Markdown 文件为空：{markdown_path}")
+
+    markdown = markdown_path.read_text(encoding="utf-8")
+    if "browser-asset://" in markdown:
+        raise ValueError(f"Markdown 仍包含 browser-asset 占位符：{markdown_path}")
+
+    for raw_reference in MARKDOWN_IMAGE_REFERENCE_PATTERN.findall(markdown):
+        reference = raw_reference.strip().strip("<>")
+        parsed_reference = urlparse(reference)
+        if parsed_reference.scheme or reference.startswith("//"):
+            continue
+        image_path = Path(unquote(reference))
+        if not image_path.is_absolute():
+            image_path = markdown_path.parent / image_path
+        if not image_path.is_file():
+            raise FileNotFoundError(
+                f"Markdown 图片引用缺少本地文件：{reference}（来自 {markdown_path}）"
+            )
 
 
 def create_context(browser: Browser, state_path: Path) -> BrowserContext:
