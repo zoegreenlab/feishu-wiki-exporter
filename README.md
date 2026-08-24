@@ -1,6 +1,6 @@
 # Feishu Wiki Course Exporter
 
-[简体中文](README.zh-CN.md)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
 A personal-use command-line tool for exporting Feishu Wiki content that the
 currently signed-in account is authorized to access. It rebuilds the complete
@@ -20,6 +20,17 @@ Stable workflow:
 ```text
 login -> capture-network -> build-tree -> export-all-browser
 ```
+
+## How It Works
+
+Feishu Wiki Exporter converts Feishu Wiki pages into local Markdown files while
+preserving embedded images.
+
+![Export Workflow](docs/images/export-workflow.png)
+
+The exporter uses the current authenticated browser session to discover
+accessible Wiki nodes and saves pages with their images as reusable local
+Markdown knowledge files.
 
 ## Features
 
@@ -92,9 +103,29 @@ Run the full workflow in order:
 .venv/bin/python exporter.py export-all-browser --output-dir output
 ```
 
+The exporter provides visible progress during authentication, wiki tree
+building, page export, and output validation.
+
+![Export Progress](docs/images/export-progress.png)
+
+To tell whether the export is running normally:
+
+- `[n/total]` shows current export progress.
+- `Completed` means the page has been exported successfully.
+- Validation results such as missing references and browser placeholders should
+  be `0`.
+- The export is successful when the command finishes normally with exit code `0`.
+
 `capture-network` records response metadata locally. `build-tree` uses that
 metadata and the saved login state to reconstruct the complete Wiki tree.
 `export-all-browser` exports every node in that tree.
+
+## Export Output
+
+The exporter generates Markdown pages and local image assets that can be reused
+in Markdown-based knowledge systems.
+
+![Exported Files](docs/images/exported-files.png)
 
 ## Output and Success Criteria
 
@@ -141,6 +172,18 @@ post-export validation. Any page failure produces a non-zero final exit status.
 - [Changelog](CHANGELOG.md)
 - [Historical audit notes](docs/audits/成功版本能力差异审计报告.md)
 
+## Attribution
+
+This project is based on [feishu-docx](https://github.com/leemysw/feishu-docx)
+by [leemysw](https://github.com/leemysw). The upstream project provides the
+underlying Feishu/Lark document conversion, browser export, local asset
+handling, and `feishu-docx` package and CLI capabilities.
+
+This repository adds a focused Wiki full-export workflow around that foundation,
+including browser-session login, network capture, recursive Wiki tree
+reconstruction, parent-and-leaf node export, deterministic use of a patched
+local CLI, post-export validation, failure logging, and batch exit-code handling.
+
 ## Validation Snapshot
 
 The current acceptance snapshot recorded:
@@ -153,6 +196,16 @@ The current acceptance snapshot recorded:
 
 This is an acceptance-run snapshot, not a guarantee for every Feishu tenant,
 account, or future page structure.
+
+## Legal and Responsible Use
+
+- Export only Feishu content that you are authorized to access and permitted to save.
+- You are responsible for copyright, privacy, confidentiality, data-protection,
+  and commercial-use compliance for the content you export.
+- Do not use this project to bypass access controls, redistribute protected
+  content, or expose another person's private data.
+- The developers and maintainers are not responsible for misuse of the tool or
+  for content handled by users.
 
 ## License
 

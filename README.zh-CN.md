@@ -1,6 +1,6 @@
 # Feishu Wiki Course Exporter
 
-[English](README.md)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
 一个面向个人使用的命令行工具，用于导出当前已登录账号有权限访问的飞书 Wiki 内容。工具会重建完整的 Wiki 节点树，并将每个发现到的节点导出为 Markdown 与本地图片资源。
 
@@ -15,6 +15,14 @@
 ```text
 login -> capture-network -> build-tree -> export-all-browser
 ```
+
+## 工作原理
+
+Feishu Wiki Exporter 会将飞书 Wiki 页面转换为本地 Markdown 文件，并保留嵌入的图片。
+
+![导出流程](docs/images/export-workflow.png)
+
+导出器使用当前登录状态访问可用 Wiki 节点，并将页面内容和图片保存为可复用的本地 Markdown 知识文件。
 
 ## 功能
 
@@ -79,7 +87,24 @@ python3 -m venv .venv
 .venv/bin/python exporter.py export-all-browser --output-dir output
 ```
 
+导出器会在登录、构建 Wiki 树、页面导出和输出校验期间显示可见进度。
+
+![导出进度](docs/images/export-progress.png)
+
+判断导出是否正常运行：
+
+- `[n/total]` 表示当前导出进度。
+- `Completed` 表示当前页面导出成功。
+- 校验结果中的 missing references 和 browser placeholders 应为 `0`。
+- 命令正常结束并返回状态码 `0` 表示导出成功。
+
 `capture-network` 会在本地记录响应元数据。`build-tree` 使用这些元数据和已保存的登录态重建完整 Wiki 树。`export-all-browser` 会导出树中的每个节点。
+
+## 导出输出
+
+导出器会生成 Markdown 页面和本地图片资源，可复用于基于 Markdown 的知识系统。
+
+![导出文件](docs/images/exported-files.png)
 
 ## 输出与成功条件
 
@@ -118,6 +143,16 @@ output/export_failures_browser.jsonl
 - [更新日志](CHANGELOG.md)
 - [历史审计记录](docs/audits/成功版本能力差异审计报告.md)
 
+## 来源与致谢
+
+本项目基于 [feishu-docx](https://github.com/leemysw/feishu-docx)，原作者为
+[leemysw](https://github.com/leemysw)。上游项目提供底层飞书/Lark 文档转换、
+浏览器导出、本地资源处理以及 `feishu-docx` 包和 CLI 能力。
+
+本仓库在此基础上增加了面向 Wiki 全量导出的工作流，包括浏览器登录态登录、
+网络捕获、递归重建 Wiki 树、父节点和叶子节点导出、固定使用项目内 patched
+CLI、导出后校验、失败日志和批处理退出码处理。
+
 ## 验收快照
 
 当前验收快照记录：
@@ -129,6 +164,13 @@ output/export_failures_browser.jsonl
 - Markdown 图片引用缺失：0。
 
 这是一轮验收运行的快照，不构成对所有飞书租户、账号或未来页面结构的保证。
+
+## 法律与负责任使用
+
+- 仅导出你有权访问并获准保存的飞书内容。
+- 你负责所导出内容的版权、隐私、保密、数据保护和商业使用合规。
+- 不得使用本项目绕过访问控制、传播受保护内容或暴露他人的私人数据。
+- 开发者和维护者不对用户滥用工具或处理导出内容所产生的后果负责。
 
 ## 许可证
 
