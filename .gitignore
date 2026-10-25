@@ -8,6 +8,7 @@ data/
 
 # Exported pages, resources, and failure logs
 output/
+output-rerun/
 
 # Acceptance test artifacts
 output-image-test/
